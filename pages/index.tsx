@@ -19,11 +19,7 @@ const Home: NextPage = () => {
 
   var BASE_URL = "https://actively-take-home.uc.r.appspot.com/";
 
-  if (
-    location.hostname === "localhost" ||
-    location.hostname === "127.0.0.1" ||
-    location.hostname === ""
-  ) {
+  if (!process.env.NODE_ENV || process.env.NODE_ENV === "development") {
     BASE_URL = "http://localhost:8080/";
   }
 
