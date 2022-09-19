@@ -1,9 +1,39 @@
-import type { NextPage } from 'next'
-import Head from 'next/head'
-import Image from 'next/image'
-import styles from '../styles/Home.module.css'
+import type {NextPage} from "next";
+import Head from "next/head";
+import Image from "next/image";
+import styles from "../styles/Home.module.css";
+import {useState} from "react";
+import {ColumnPicker} from "../components/ColumnPicker";
+import {DataTable} from "../components/DataTable";
 
 const Home: NextPage = () => {
+  const [file, setFile] = useState("");
+  const [data, setData] = useState<object | null>(null);
+  const [columns, setColumns] = useState<object | null>(null);
+  const [output, setOutput] = useState<string | null>(null);
+  const [inputs, setInputs] = useState<string[] | null>(null);
+  const [predictionValues, setPredictionValues] = useState<Map<string, string>>(
+    new Map<string, string>()
+  );
+  const [prediction, setPrediction] = useState<string | null>(null);
+
+  const handleFileChange = (e: any) => {
+    setFile(e.target.files[0]);
+
+    let formData = new FormData();
+    formData.append("data", e.target.files[0]);
+    fetch("http://localhost:8080/data/upload", {
+      method: "POST",
+      mode: "cors",
+      body: formData,
+    })
+      .then((response) => response.json())
+      .then((res) => {
+        setData(JSON.parse(res.data));
+        setColumns(res.types);
+      });
+  };
+
   return (
     <div className={styles.container}>
       <Head>
@@ -12,61 +42,125 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
-        </h1>
-
-        <p className={styles.description}>
-          Get started by editing{' '}
-          <code className={styles.code}>pages/index.tsx</code>
-        </p>
-
-        <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h2>Documentation &rarr;</h2>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h2>Learn &rarr;</h2>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/canary/examples"
-            className={styles.card}
-          >
-            <h2>Examples &rarr;</h2>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-          >
-            <h2>Deploy &rarr;</h2>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+      <div className="flex justify-center flex-col w-8/12 mx-auto">
+        <div className="flex justify-center mb-3">
+          <div className="mb-3">
+            <label
+              htmlFor="formFile"
+              className="form-label inline-block mb-2 mt-5 text-gray-700"
+            >
+              1) Upload a data file
+            </label>
+            <input
+              className="form-control block w-full px-3 py-1.5 text-base font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
+              type="file"
+              id="formFile"
+              accept=".csv"
+              onChange={handleFileChange}
+            />
+          </div>
         </div>
-      </main>
 
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+        <h1>2) Customize your Model</h1>
+
+        <ColumnPicker
+          title="Input Columns (Choose 1 or more)"
+          columns={
+            columns
+              ? (Object.entries(columns)
+                  .map((column) => (column[1] == "int" ? column[0] : null))
+                  .filter((column) => column != null) as string[])
+              : []
+          }
+          selected={inputs ? inputs : []}
+          setSelected={setInputs}
+          only_one_allowed={false}
+        />
+        <ColumnPicker
+          title="Output Column (Choose 1)"
+          columns={
+            columns
+              ? (Object.entries(columns)
+                  .map((column) => (column[1] == "bool" ? column[0] : null))
+                  .filter((column) => column != null) as string[])
+              : []
+          }
+          selected={output ? [output] : []}
+          setSelected={(selected) => setOutput(selected[0])}
+          only_one_allowed={true}
+        />
+
+        <DataTable data={data ? data : {}} />
+        <br />
+        <br />
+
+        <h1>
+          Enter values for which you want to predict the output (choose inputs
+          above first)
+        </h1>
+        <br />
+        {inputs &&
+          inputs.map((input) => (
+            <div className="flex justify-center">
+              <div className="mb-3 xl:w-96">
+                <label
+                  htmlFor={`${input}Input`}
+                  className="form-label inline-block mb-2 text-gray-700"
+                >
+                  {input}
+                </label>
+                <input
+                  type="text"
+                  className="form-control block w-full px-3 py-1.5 text-base font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
+                  id={`${input}Input`}
+                  placeholder="Enter a value"
+                  onChange={(e) => {
+                    setPredictionValues(
+                      predictionValues.set(input, e.target.value)
+                    );
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+
+        <h1>3) Train your model and use it to predict</h1>
+        <br />
+        <button
+          type="button"
+          disabled={output == null || inputs == null || inputs.length < 1}
+          className="mb-8 inline-flex w-32 disabled:bg-slate-400 font-bold justify-center items-center rounded-md border border-transparent bg-indigo-600 px-3 py-2 text-sm font-medium leading-4 text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          onClick={() => {
+            let formData = new FormData();
+            formData.append("dataset", file);
+            formData.append("output", output as string); // button is disabled if output is null
+            formData.append("inputs", JSON.stringify(inputs)); // button is disabled if inputs is null
+            let temp: {[x: string]: string}[] = [];
+            predictionValues.forEach((value, key) => {
+              temp.push({[key]: value});
+            });
+            formData.append(
+              "hypothetical_input",
+              JSON.stringify(Object.assign({}, ...temp))
+            );
+            fetch("http://localhost:8080/data/predict", {
+              method: "POST",
+              mode: "cors",
+              body: formData,
+            })
+              .then((response) => response.json())
+              .then((data) => setPrediction(data.prediction));
+          }}
         >
-          Powered by{' '}
-          <span className={styles.logo}>
-            <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
-          </span>
-        </a>
-      </footer>
+          Train
+        </button>
+        <h1>4) View the Results</h1>
+        <div className="flex justify-left border-2 border-indigo-600 rounded-lg p-4 my-4 flex-wrap">
+          <h2>Prediction: {`${prediction ? prediction : undefined}`}</h2>
+        </div>
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;
