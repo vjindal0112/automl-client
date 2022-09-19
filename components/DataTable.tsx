@@ -16,16 +16,20 @@ export const DataTable = (data: {data: object}) => {
               <tr>
                 {Object.keys(Object.entries(data["data"])[0][1]).map(
                   (col_name: string) => (
-                    <th className="p-2">{col_name}</th>
+                    <th key={col_name} className="p-2">
+                      {col_name}
+                    </th>
                   )
                 )}
               </tr>
             </thead>
             <tbody>
               {Object.values(data["data"]).map((row: any) => (
-                <tr>
+                <tr key={row}>
                   {Object.values(row).map((col: any) => (
-                    <td className="p-2">{col.toString()}</td>
+                    <td key={col} className="p-2">
+                      {col.toString()}
+                    </td>
                   ))}
                 </tr>
               ))}

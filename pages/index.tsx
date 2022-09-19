@@ -101,7 +101,7 @@ const Home: NextPage = () => {
         <br />
         {inputs &&
           inputs.map((input) => (
-            <div className="flex justify-center">
+            <div key={input} className="flex justify-center">
               <div className="mb-3 xl:w-96">
                 <label
                   htmlFor={`${input}Input`}
