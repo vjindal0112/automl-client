@@ -17,12 +17,22 @@ const Home: NextPage = () => {
   );
   const [prediction, setPrediction] = useState<string | null>(null);
 
+  var BASE_URL = "https://actively-take-home.uc.r.appspot.com/";
+
+  if (
+    location.hostname === "localhost" ||
+    location.hostname === "127.0.0.1" ||
+    location.hostname === ""
+  ) {
+    BASE_URL = "http://localhost:8080/";
+  }
+
   const handleFileChange = (e: any) => {
     setFile(e.target.files[0]);
 
     let formData = new FormData();
     formData.append("data", e.target.files[0]);
-    fetch("http://localhost:8080/data/upload", {
+    fetch(BASE_URL + "data/upload", {
       method: "POST",
       mode: "cors",
       body: formData,
@@ -143,7 +153,7 @@ const Home: NextPage = () => {
               "hypothetical_input",
               JSON.stringify(Object.assign({}, ...temp))
             );
-            fetch("http://localhost:8080/data/predict", {
+            fetch(BASE_URL + "data/predict", {
               method: "POST",
               mode: "cors",
               body: formData,
